@@ -1,6 +1,8 @@
 #ifndef DRIVETRAIN_H
 #define DRIVETRAIN_H
 
+#include <Arduino.h>
+
 class Drivetrain {
 public:
     // Constructor
