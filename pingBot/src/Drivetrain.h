@@ -1,21 +1,26 @@
 #ifndef DRIVETRAIN_H
 #define DRIVETRAIN_H
 
+#include <Servo.h>
+#include "Config.h"       // Assuming your PIN numbers are defined here
+#include <Arduino.h>      // Required for servo and pin constants
+
+
+
 class Drivetrain {
-public:
-    // Constructor
-    Drivetrain();
-
-    // Destructor
-    ~Drivetrain();
-
-    /**
-     * Define your movement methods here.
-     * Example: void drive(double forward, double rotation);
-     */
-
 private:
-    // Member variables (motor controllers, sensors, etc.) go here.
-};
+    Servo servoLeft;
+    Servo servoRight;
 
-#endif // DRIVETRAIN_H
+public:
+    Drivetrain();
+    
+    void stop();
+    void forward();
+    void turnLeft();
+    void turnRight();
+    
+    // ADD THESE TWO LINES:
+    void veerLeft();
+    void veerRight();
+};
