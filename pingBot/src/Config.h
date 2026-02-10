@@ -11,9 +11,13 @@ namespace RobotConfig {
     }
 
     namespace QTI {
-        constexpr int QTI_PIN_0   = 47;
-        constexpr int QTI_PIN_1 = 51;
-        constexpr int QTI_PIN_2  = 52;
+        constexpr int QTI_PIN_0 = 47; // Left QTI
+        constexpr int QTI_PIN_1 = 51;   // Middle QTI
+        constexpr int QTI_PIN_2 = 52;  // Right QTI
+
+        constexpr int QTI_THRESH_0 = 600; // Left QTI
+        constexpr int QTI_THRESH_1 = 300; // Left QTI
+        constexpr int QTI_THRESH_2 = 400; // Left QTI
     }
 
 }
