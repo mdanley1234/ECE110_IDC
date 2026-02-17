@@ -13,9 +13,11 @@
 #define BLUE_PIN 44   // Blue LED pin
 
 // QTI Threshold Config
-#define QTI_THRESH_0 600  // Left Qti
+#define QTI_THRESH_0 500  // Left Qti
 #define QTI_THRESH_1 300  // Middle Qti
 #define QTI_THRESH_2 400  // Right Qti
+
+#define ASCII_0
 
 // Object Setup
 Servo servoLeft;
@@ -105,9 +107,9 @@ void runHash() {
 
 // LED set code
 void setRGB(bool R, bool G, bool B) {
-  digitalWrite(RED_PIN, R);
-  digitalWrite(GREEN_PIN, G);
-  digitalWrite(BLUE_PIN, B);
+  digitalWrite(RED_PIN, !R);
+  digitalWrite(GREEN_PIN, !G);
+  digitalWrite(BLUE_PIN, !B);
 }
 
 // Compile QTI State
