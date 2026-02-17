@@ -17,7 +17,13 @@
 #define QTI_THRESH_1 300  // Middle Qti
 #define QTI_THRESH_2 400  // Right Qti
 
-#define ASCII_0
+// ASCII codes for team 3
+#define ASCII_0 83
+#define ASCII_1 84
+#define ASCII_2 85
+#define ASCII_3 86
+#define ASCII_4 87
+#define ASCII_5 88
 
 // Object Setup
 Servo servoLeft;
@@ -73,34 +79,58 @@ void runHash() {
       delay(500);
       setRGB(0, 0, 0);
       setDriveMode(DriveState::FORWARD);
-      delay(150);
+      delay(250);
       break;
     case 2:
       setRGB(0, 1, 0);
       delay(500);
       setRGB(0, 0, 0);
       setDriveMode(DriveState::FORWARD);
-      delay(150);
+      delay(250);
       break;
     case 3:
       setRGB(0, 0, 1);
       delay(500);
       setRGB(0, 0, 0);
       setDriveMode(DriveState::FORWARD);
-      delay(150);
+      delay(250);
       break;
     case 4:
       setRGB(1, 0, 0);
       delay(500);
       setRGB(0, 0, 0);
       setDriveMode(DriveState::FORWARD);
-      delay(150);
+      delay(250);
       break;
     case 5:
       setRGB(1, 1, 1);
       delay(500);
       setRGB(0, 0, 0);
-      while (true);  // Code stop command
+      setDriveMode(DriveState::FORWARD);
+      delay(250);
+      break;
+    case 6:
+      delay(500);
+      setDriveMode(DriveState::TURN_RIGHT);
+      delay(500);
+      break;
+    case 7:
+      delay(500);
+      setDriveMode(DriveState::FORWARD);
+      delay(150);
+      break;
+    case 8:
+      delay(500);
+      setDriveMode(DriveState::FORWARD);
+      delay(150);
+      break;
+    case 9:
+      delay(500);
+      setDriveMode(DriveState::FORWARD);
+      delay(150);
+      break;
+    case 10:
+      while (true);
       break;
   }
 }
@@ -144,6 +174,7 @@ void setDriveMode(DriveState state) {
   switch (state) {
 
     // Drive forward
+    case DriveState::JUMP:
     case DriveState::FORWARD:
       servoLeft.writeMicroseconds(1700);   // Counter-Clockwise
       servoRight.writeMicroseconds(1300);  // Clockwise
@@ -162,7 +193,6 @@ void setDriveMode(DriveState state) {
       break;
 
     // Veer to the right
-    case DriveState::JUMP:
     case DriveState::VEER_RIGHT:
       servoLeft.writeMicroseconds(1700);   // Fast Left
       servoRight.writeMicroseconds(1450);  // Slow Right
