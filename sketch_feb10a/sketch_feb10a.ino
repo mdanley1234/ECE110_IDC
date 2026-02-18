@@ -1,5 +1,7 @@
 #include <Servo.h>
 
+// ECE 110 - IDC Code for Team 3 (Ping)
+
 // Pin Config
 #define QTI_PIN_0 47  // Left Qti
 #define QTI_PIN_1 51  // Middle Qti
@@ -12,18 +14,22 @@
 #define GREEN_PIN 46  // Green LED pin
 #define BLUE_PIN 44   // Blue LED pin
 
+#define E_RED_PIN 9     // External Red LED pin
+#define E_GREEN_PIN 10  // External Green LED pin
+#define E_BLUE_PIN 8    // External Blue LED pin
+
+#define PING_PIN 50  // Ping sensor pin
+
 // QTI Threshold Config
 #define QTI_THRESH_0 500  // Left Qti
 #define QTI_THRESH_1 300  // Middle Qti
 #define QTI_THRESH_2 400  // Right Qti
 
-// ASCII codes for team 3
+// Ping Threshold Config (cm)
+#define PING_THRESH 20
+
+// ASCII code for team 3
 #define ASCII_0 83
-#define ASCII_1 84
-#define ASCII_2 85
-#define ASCII_3 86
-#define ASCII_4 87
-#define ASCII_5 88
 
 // Object Setup
 Servo servoLeft;
@@ -32,9 +38,12 @@ Servo servoRight;
 // Hash Setup
 int hash = 0;
 
+// Data Setup (index 1)
+int objectPos = 0;
+
 // SYSTEM STATE DECLARATIONS
 
-// Drivetrain states (DriveState != DriveMode)
+// Drivetrain states
 enum class DriveState : int {
   HASH,        // Mapped to STOP command
   VEER_LEFT,   // n/a
@@ -43,19 +52,29 @@ enum class DriveState : int {
   VEER_RIGHT,  // n/a
   FORWARD,     // n/a
   TURN_RIGHT,  // n/a
-  JUMP         // Mapped to VEER_RIGHT
+  JUMP         // Mapped to FORWARD command
 };
 
 void setup() {
+  // Xbee setup
+  Serial2.begin(9600);
+  delay(500);
+
   // Setup servos
   servoLeft.attach(11);
   servoRight.attach(12);
 
-  // Setup LEDs
+  // Setup LED
   pinMode(RED_PIN, OUTPUT);
   pinMode(GREEN_PIN, OUTPUT);
   pinMode(BLUE_PIN, OUTPUT);
   setRGB(0, 0, 0);
+
+  // Setup External LED
+  pinMode(E_RED_PIN, OUTPUT);
+  pinMode(E_GREEN_PIN, OUTPUT);
+  pinMode(E_BLUE_PIN, OUTPUT);
+  setERGB(0, 0, 0);
 }
 
 void loop() {
@@ -66,71 +85,86 @@ void loop() {
 
   // If HASH state is detected, run Hash
   if (driveState == DriveState::HASH) { runHash(); }
+
+  // Listen for Xbee data
+  pollXbee();
 }
 
 // Hash code
 void runHash() {
   hash++;
 
-  // Set corresponding LED
+  // Hash cases for robot
   switch (hash) {
-    case 1:
-      setRGB(1, 0, 1);
+    case 1:               // First hash mark
+      setRGB(1, 0, 1);    // Set RGB to Purple
+      updateObjectPos();  // Check for object with ping sensor (updates external LED)
       delay(500);
-      setRGB(0, 0, 0);
+      setRGB(0, 0, 0);   // Turn off RGB LED
+      setERGB(0, 0, 0);  // Turn off external RGB LED
       setDriveMode(DriveState::FORWARD);
       delay(250);
       break;
-    case 2:
-      setRGB(0, 1, 0);
+    case 2:               // Second hash mark
+      setRGB(0, 1, 0);    // Set RGB to Green
+      updateObjectPos();  // Check for object with ping sensor (updates external LED)
       delay(500);
-      setRGB(0, 0, 0);
+      setRGB(0, 0, 0);   // Turn off RGB LED
+      setERGB(0, 0, 0);  // Turn off external RGB LED
       setDriveMode(DriveState::FORWARD);
       delay(250);
       break;
-    case 3:
-      setRGB(0, 0, 1);
+    case 3:               // Third hash mark
+      setRGB(0, 0, 1);    // Set RGB to Blue
+      updateObjectPos();  // Check for object with ping sensor (updates external LED)
       delay(500);
-      setRGB(0, 0, 0);
+      setRGB(0, 0, 0);   // Turn off RGB LED
+      setERGB(0, 0, 0);  // Turn off external RGB LED
       setDriveMode(DriveState::FORWARD);
       delay(250);
       break;
-    case 4:
-      setRGB(1, 0, 0);
+    case 4:               // Fourth hash mark
+      setRGB(1, 0, 0);    // Set RGB to Red
+      updateObjectPos();  // Check for object with ping sensor (updates external LED)
       delay(500);
-      setRGB(0, 0, 0);
+      setRGB(0, 0, 0);   // Turn off RGB LED
+      setERGB(0, 0, 0);  // Turn off external RGB LED
       setDriveMode(DriveState::FORWARD);
       delay(250);
       break;
-    case 5:
-      setRGB(1, 1, 1);
+    case 5:               // Fifth hash mark
+      setRGB(1, 1, 1);    // Set RGB to White
+      updateObjectPos();  // Check for object with ping sensor (updates external LED)
       delay(500);
-      setRGB(0, 0, 0);
+      setRGB(0, 0, 0);   // Turn off RGB LED
+      setERGB(0, 0, 0);  // Turn off external RGB LED
       setDriveMode(DriveState::FORWARD);
       delay(250);
       break;
-    case 6:
-      delay(500);
+    case 6:  // Jump across white gap
+      delay(250);
       setDriveMode(DriveState::TURN_RIGHT);
       delay(500);
       break;
-    case 7:
+    case 7:  // Ignore first parking spot
       delay(500);
       setDriveMode(DriveState::FORWARD);
       delay(150);
       break;
-    case 8:
+    case 8:  // Ignore second parking spot
       delay(500);
       setDriveMode(DriveState::FORWARD);
       delay(150);
       break;
-    case 9:
+    case 9:  // Ignore third parking spot
       delay(500);
       setDriveMode(DriveState::FORWARD);
       delay(150);
       break;
-    case 10:
-      while (true);
+    case 10:  // Park bot in fourth parking spot
+      sendXbee(ASCII_0 + objectPos);
+      while (true)
+        ;
       break;
   }
 }
@@ -142,7 +176,14 @@ void setRGB(bool R, bool G, bool B) {
   digitalWrite(BLUE_PIN, !B);
 }
 
-// Compile QTI State
+// External LED set code
+void setERGB(bool R, bool G, bool B) {
+  digitalWrite(E_RED_PIN, R);
+  digitalWrite(E_GREEN_PIN, G);
+  digitalWrite(E_BLUE_PIN, B);
+}
+
+// Compile QTI State (Returns int 0-7)
 int getQtiState() {
   int state = readQti(QTI_PIN_0, QTI_THRESH_0) * 4;
   state += readQti(QTI_PIN_1, QTI_THRESH_1) * 2;
@@ -212,4 +253,48 @@ void setDriveMode(DriveState state) {
       servoRight.writeMicroseconds(1500);
       break;
   }
+}
+
+// Updates objectPos and external LED using pingObject method
+void updateObjectPos() {
+  if (pingObject()) {
+    objectPos = hash;
+    setERGB(0, 1, 0);
+  } else {
+    setERGB(1, 0, 0);
+  }
+}
+
+// Returns true if object is detected
+bool pingObject() {
+  pinMode(PING_PIN, OUTPUT);
+  digitalWrite(PING_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(PING_PIN, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(PING_PIN, LOW);
+  pinMode(PING_PIN, INPUT);
+  long duration = pulseIn(PING_PIN, HIGH);
+  long cm = duration / 29 / 2;
+  return cm < PING_THRESH;
+}
+
+// Returns int from Xbee buffer or 0 if not available and updates external LED
+int pollXbee() {
+  if (Serial2.available()) {
+    setERGB(1, 1, 1);  // Set external RGB LED white
+    delay(250);
+    setERGB(0, 0, 0);  // Turn off external RGB LED
+    return Serial2.read();
+  } else {
+    return 0;
+  }
+}
+
+// Wrapper class for Xbee transmit function and updates external LED
+int sendXbee(int data) {
+  setERGB(0, 0, 1);  // Set external RGB LED blue
+  delay(250);
+  setERGB(0, 0, 0);  // Turn off external RGB LED
+  Serial2.print(data);
 }
