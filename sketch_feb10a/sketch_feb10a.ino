@@ -31,6 +31,9 @@
 // ASCII code for team 3
 #define ASCII_0 83
 
+// Xbee Polling Interval
+#define XBEE_POLL_INTERVAL 250 // Time (ms) between Xbee polls
+
 // Object Setup
 Servo servoLeft;
 Servo servoRight;
@@ -40,6 +43,9 @@ int hash = 0;
 
 // Data Setup (index 1)
 int objectPos = 0;
+
+// Xbee Timing Setup
+int lastPollTime = 0;
 
 // SYSTEM STATE DECLARATIONS
 
@@ -86,8 +92,14 @@ void loop() {
   // If HASH state is detected, run Hash
   if (driveState == DriveState::HASH) { runHash(); }
 
-  // Listen for Xbee data
-  pollXbee();
+  // Poll Xbee every XBEE_POLL_INTERVAL for new data
+  if (millis() > lastPollTime + XBEE_POLL_INTERVAL) {
+    lastPollTime = millis();
+    int data = pollXbee();
+    if (data == 0) {
+      setERGB(0, 0, 0);  // Turn off external RGB LED if no new data
+    }
+  }
 }
 
 // Hash code
@@ -210,6 +222,20 @@ int readQti(int pin, int thresh) {
   return dischargeTime;
 }
 
+// Maps -100 to 100 speed value to microseconds for each wheel.
+// Left wheel:  100 = 1700µs (forward), -100 = 1300µs (backward)
+// Right wheel: 100 = 1300µs (forward), -100 = 1700µs (backward) [mirrored]
+void setWheelSpeed(int left, int right) {
+  left  = constrain(left,  -100, 100);
+  right = constrain(right, -100, 100);
+
+  int leftMicros  = map(left,   -100, 100, 1300, 1700);
+  int rightMicros = map(right,  -100, 100, 1700, 1300);  // Inverted: mirrored servo
+
+  servoLeft.writeMicroseconds(leftMicros);
+  servoRight.writeMicroseconds(rightMicros);
+}
+
 // Set drivetrain mode (movement commands)
 void setDriveMode(DriveState state) {
   switch (state) {
@@ -217,40 +243,34 @@ void setDriveMode(DriveState state) {
     // Drive forward
     case DriveState::JUMP:
     case DriveState::FORWARD:
-      servoLeft.writeMicroseconds(1700);   // Counter-Clockwise
-      servoRight.writeMicroseconds(1300);  // Clockwise
+      setWheelSpeed(100, 100);
       break;
 
     // Veer to the left
     case DriveState::VEER_LEFT:
-      servoLeft.writeMicroseconds(1550);   // Slow Left
-      servoRight.writeMicroseconds(1300);  // Fast Right
+      setWheelSpeed(25, 100);
       break;
 
     // Turn left
     case DriveState::TURN_LEFT:
-      servoLeft.writeMicroseconds(1300);   // Backwards
-      servoRight.writeMicroseconds(1300);  // Forwards
+      setWheelSpeed(-100, 100);
       break;
 
     // Veer to the right
     case DriveState::VEER_RIGHT:
-      servoLeft.writeMicroseconds(1700);   // Fast Left
-      servoRight.writeMicroseconds(1450);  // Slow Right
+      setWheelSpeed(100, 25);
       break;
 
     // Turn right
     case DriveState::TURN_RIGHT:
-      servoLeft.writeMicroseconds(1700);   // Forwards
-      servoRight.writeMicroseconds(1700);  // Backwards
+      setWheelSpeed(100, -100);
       break;
 
     // Stop
     case DriveState::HASH:
     case DriveState::ERR:
     default:
-      servoLeft.writeMicroseconds(1500);
-      servoRight.writeMicroseconds(1500);
+      setWheelSpeed(0, 0);
       break;
   }
 }
@@ -279,12 +299,10 @@ bool pingObject() {
   return cm < PING_THRESH;
 }
 
-// Returns int from Xbee buffer or 0 if not available and updates external LED
+// Returns int from Xbee buffer or 0 if not available
 int pollXbee() {
   if (Serial2.available()) {
-    setERGB(1, 1, 1);  // Set external RGB LED white
-    delay(250);
-    setERGB(0, 0, 0);  // Turn off external RGB LED
+    setERGB(1, 1, 1);  // Set external RGB LED white if data is read
     return Serial2.read();
   } else {
     return 0;
