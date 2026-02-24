@@ -32,17 +32,17 @@
 #define ASCII_0 83
 
 // Xbee Polling Interval
-#define XBEE_POLL_INTERVAL 250 // Time (ms) between Xbee polls
-int lastPollTime = 0; // Time tracker
+#define XBEE_POLL_INTERVAL 250  // Time (ms) between Xbee polls
+int lastPollTime = 0;           // Time tracker
 
 // Object Setup
 Servo servoLeft;
 Servo servoRight;
 
 // Data trackers
-int hash = 0; // Tracks current hash
+int hash = 0;       // Tracks current hash
 int objectPos = 0;  // Tracks registered object position
-int scores[5]; // Tracks scores for other teams
+int scores[5];      // Tracks scores for other teams
 
 // SYSTEM STATE DECLARATIONS
 
@@ -62,16 +62,16 @@ void setup() {
   // Xbee setup
   Serial2.begin(9600);
   delay(500);
-  while (Serial2.available()) Serial2.read(); // Clear Xbee
+  while (Serial2.available()) Serial2.read();  // Clear Xbee
 
   // Setup the LCD
   Serial3.begin(9600);
   delay(100);
-  Serial.write(12); // clear display
+  Serial.write(12);  // clear display
   delay(10);
-  Serial.write(22); // no cursor no blink
+  Serial.write(22);  // no cursor no blink
   delay(10);
-  Serial.write(18); // backlight off
+  Serial.write(18);  // backlight off
   delay(10);
 
   // Setup servos
@@ -103,22 +103,8 @@ void loop() {
   // Poll Xbee every XBEE_POLL_INTERVAL for new data
   if (millis() > lastPollTime + XBEE_POLL_INTERVAL) {
     lastPollTime = millis();
-    int data = pollXbee();
-    if (data == 0) {
-      setERGB(0, 0, 0);  // Turn off external RGB LED if no new data
-    } 
-    else {
-      decodeStore(data);
-    }
+    pollXbee();
   }
-}
-
-// Decode and store scores from other groups
-void decodeStore(int data) {
-  data -= 65;
-  int group = data / 6;
-  int score = data % 6;
-  scores[group] = score;
 }
 
 // Hash code
@@ -196,17 +182,16 @@ void runHash() {
 
       // If object is present, transmit objectPos score, otherwise transmit 0
       if (pingObject()) {
-            setERGB(0, 1, 0);
-            delay(250);
-                  sendXbee(ASCII_0 + objectPos);
-      }
-      else {
+        setERGB(0, 1, 0);
+        delay(250);
+        sendXbee(ASCII_0 + objectPos);
+      } else {
         setERGB(1, 0, 0);
         delay(250);
         sendXbee(ASCII_0);
       }
       delay(250);
-      setERGB(0,0,0);
+      setERGB(0, 0, 0);
       while (true)
         ;
       break;
@@ -258,11 +243,11 @@ int readQti(int pin, int thresh) {
 // Left wheel:  100 = 1700µs (forward), -100 = 1300µs (backward)
 // Right wheel: 100 = 1300µs (forward), -100 = 1700µs (backward) [mirrored]
 void setWheelSpeed(int left, int right) {
-  left  = constrain(left,  -100, 100);
+  left = constrain(left, -100, 100);
   right = constrain(right, -100, 100);
 
-  int leftMicros  = map(left,   -100, 100, 1300, 1700);
-  int rightMicros = map(right,  -100, 100, 1700, 1300);  // Inverted: mirrored servo
+  int leftMicros = map(left, -100, 100, 1300, 1700);
+  int rightMicros = map(right, -100, 100, 1700, 1300);  // Inverted: mirrored servo
 
   servoLeft.writeMicroseconds(leftMicros);
   servoRight.writeMicroseconds(rightMicros);
@@ -331,14 +316,22 @@ bool pingObject() {
   return cm < PING_THRESH;
 }
 
-// Returns true if data is read from the Xbee buffer
-bool pollXbee() {
+// Updates scores[] using Xbee data and updates ERGB LED accordingly
+void pollXbee() {
   if (Serial2.available()) {
-    setERGB(1, 1, 1);  // Set external RGB LED white if data is read
-    return Serial2.read();
+    setERGB(1, 1, 1);  // Set external RGB LED to white if data is read
+    updateScores(Serial2.read());
   } else {
-    return 0;
+    setERGB(0, 0, 0); // Set external RBB LED to off if no data is avaliable
   }
+}
+
+// Decode and store scores from other groups
+void updateScores(int data) {
+  data -= 65;
+  int group = data / 6;
+  int score = data % 6;
+  scores[group] = score;
 }
 
 // Wrapper class for Xbee transmit function and updates external LED
