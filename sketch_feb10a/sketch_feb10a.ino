@@ -28,24 +28,21 @@
 // Ping Threshold Config (cm)
 #define PING_THRESH 20
 
-// ASCII code for team 3
+// ASCII Number for Team 3 (Ping)
 #define ASCII_0 83
 
 // Xbee Polling Interval
 #define XBEE_POLL_INTERVAL 250 // Time (ms) between Xbee polls
+int lastPollTime = 0; // Time tracker
 
 // Object Setup
 Servo servoLeft;
 Servo servoRight;
 
-// Hash Setup
-int hash = 0;
-
-// Data Setup (index 1)
-int objectPos = 0;
-
-// Xbee Timing Setup
-int lastPollTime = 0;
+// Data trackers
+int hash = 0; // Tracks current hash
+int objectPos = 0;  // Tracks registered object position
+int scores[5]; // Tracks scores for other teams
 
 // SYSTEM STATE DECLARATIONS
 
@@ -65,6 +62,17 @@ void setup() {
   // Xbee setup
   Serial2.begin(9600);
   delay(500);
+  while (Serial2.available()) Serial2.read(); // Clear Xbee
+
+  // Setup the LCD
+  Serial3.begin(9600);
+  delay(100);
+  Serial.write(12); // clear display
+  delay(10);
+  Serial.write(22); // no cursor no blink
+  delay(10);
+  Serial.write(18); // backlight off
+  delay(10);
 
   // Setup servos
   servoLeft.attach(11);
@@ -98,8 +106,19 @@ void loop() {
     int data = pollXbee();
     if (data == 0) {
       setERGB(0, 0, 0);  // Turn off external RGB LED if no new data
+    } 
+    else {
+      decodeStore(data);
     }
   }
+}
+
+// Decode and store scores from other groups
+void decodeStore(int data) {
+  data -= 65;
+  int group = data / 6;
+  int score = data % 6;
+  scores[group] = score;
 }
 
 // Hash code
@@ -174,7 +193,20 @@ void runHash() {
       delay(150);
       break;
     case 10:  // Park bot in fourth parking spot
-      sendXbee(ASCII_0 + objectPos);
+
+      // If object is present, transmit objectPos score, otherwise transmit 0
+      if (pingObject()) {
+            setERGB(0, 1, 0);
+            delay(250);
+                  sendXbee(ASCII_0 + objectPos);
+      }
+      else {
+        setERGB(1, 0, 0);
+        delay(250);
+        sendXbee(ASCII_0);
+      }
+      delay(250);
+      setERGB(0,0,0);
       while (true)
         ;
       break;
@@ -299,8 +331,8 @@ bool pingObject() {
   return cm < PING_THRESH;
 }
 
-// Returns int from Xbee buffer or 0 if not available
-int pollXbee() {
+// Returns true if data is read from the Xbee buffer
+bool pollXbee() {
   if (Serial2.available()) {
     setERGB(1, 1, 1);  // Set external RGB LED white if data is read
     return Serial2.read();
@@ -310,7 +342,7 @@ int pollXbee() {
 }
 
 // Wrapper class for Xbee transmit function and updates external LED
-int sendXbee(int data) {
+int sendXbee(char data) {
   setERGB(0, 0, 1);  // Set external RGB LED blue
   delay(250);
   setERGB(0, 0, 0);  // Turn off external RGB LED
