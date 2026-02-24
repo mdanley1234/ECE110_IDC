@@ -42,7 +42,7 @@ Servo servoRight;
 // Data trackers
 int hash = 0;       // Tracks current hash
 int objectPos = 0;  // Tracks registered object position
-int scores[5];      // Tracks scores for other teams
+int scores[5] = {-1, -1, -1, -1, -1};      // Tracks scores for other teams
 
 // SYSTEM STATE DECLARATIONS
 
@@ -185,16 +185,42 @@ void runHash() {
         setERGB(0, 1, 0);
         delay(250);
         sendXbee(ASCII_0 + objectPos);
+        scores[3] = objectPos;
       } else {
         setERGB(1, 0, 0);
         delay(250);
         sendXbee(ASCII_0);
+        scores[3] = 0;
       }
       delay(250);
       setERGB(0, 0, 0);
-      while (true)
-        ;
+      while (!checkScores()) {
+        pollXbee();
+        delay(250);
+      }
+      setERGB(0,0,0);
+      updateLCD();
+      while(true);
+
       break;
+  }
+}
+
+// Check that score data is recieved from all bots
+bool checkScores() {
+  for (int i = 0; i < 5; i++) {
+    if (scores[i] == -1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Update LCD from scores[] array
+void updateLCD() {
+  for (int i = 0; i < 5; i++) {
+    Serial3.print(scores[i]);
+    Serial3.print(' ');
   }
 }
 
@@ -316,14 +342,18 @@ bool pingObject() {
   return cm < PING_THRESH;
 }
 
-// Updates scores[] using Xbee data and updates ERGB LED accordingly
+// Listens for data from the Xbee buffer, stores in score[], and updates ERGB LED
 void pollXbee() {
-  if (Serial2.available()) {
-    setERGB(1, 1, 1);  // Set external RGB LED to white if data is read
-    updateScores(Serial2.read());
-  } else {
-    setERGB(0, 0, 0); // Set external RBB LED to off if no data is avaliable
+  if (!Serial2.available()) {
+    setERGB(0, 0, 0);
+    return;
   }
+
+  char data = Serial2.read();
+  bool valid = (data >= 65 && data <= 95);
+
+  setERGB(valid, valid, valid);
+  if (valid) updateScores(data);
 }
 
 // Decode and store scores from other groups
