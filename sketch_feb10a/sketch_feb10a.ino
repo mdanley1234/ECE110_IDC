@@ -31,6 +31,9 @@
 // ASCII Number for Team 3 (Ping)
 #define ASCII_0 83
 
+// Time limiter before moving on from first stage
+#define FIRST_STAGE_WAIT 20000
+
 // Xbee Polling Interval
 #define XBEE_POLL_INTERVAL 250  // Time (ms) between Xbee polls
 int lastPollTime = 0;           // Time tracker
@@ -40,9 +43,9 @@ Servo servoLeft;
 Servo servoRight;
 
 // Data trackers
-int hash = 0;       // Tracks current hash
-int objectPos = 0;  // Tracks registered object position
-int scores[5] = {-1, -1, -1, -1, -1};      // Tracks scores for other teams
+int hash = 0;                            // Tracks current hash
+int objectPos = 0;                       // Tracks registered object position
+int scores[5] = { -1, -1, -1, -1, -1 };  // Tracks scores for other teams
 
 // SYSTEM STATE DECLARATIONS
 
@@ -155,6 +158,10 @@ void runHash() {
       delay(500);
       setRGB(0, 0, 0);   // Turn off RGB LED
       setERGB(0, 0, 0);  // Turn off external RGB LED
+
+      while (millis() < FIRST_STAGE_WAIT)
+        ;
+
       setDriveMode(DriveState::FORWARD);
       delay(250);
       break;
@@ -198,16 +205,18 @@ void runHash() {
         pollXbee();
         delay(250);
       }
-      setERGB(0,0,0);
+      setERGB(0, 0, 0);
       int points = updateLCD();
 
       // Victory / Loss Code
       if (points < 10) {
         performLoss();
-      }
-      else {
+      } else {
         performVictory();
       }
+
+      while (true)
+        ;
 
       break;
   }
@@ -215,12 +224,12 @@ void runHash() {
 
 // Victory
 void performVictory() {
-
+  lightshow_run();
 }
 
 // Loss
 void performLoss() {
-
+  imperial_march();
 }
 
 // Check that score data is recieved from all bots
@@ -234,7 +243,7 @@ bool checkScores() {
 }
 
 // Update LCD from scores[] array
-void updateLCD() {
+int updateLCD() {
   int x = 0;
   for (int i = 0; i < 5; i++) {
     Serial3.print(scores[i]);
@@ -394,4 +403,191 @@ int sendXbee(char data) {
   delay(250);
   setERGB(0, 0, 0);  // Turn off external RGB LED
   Serial2.print(data);
+}
+
+// Derock's Import Code
+
+static int RGB_OFF[] = { 0, 0, 0 };
+
+#define RGB_RED_PIN 45
+#define RGB_GREEN_PIN 46
+#define RGB_BLUE_PIN 44
+
+/**
+ * Sets the CS-Bot RGB
+ */
+void rgb_set(int *rgb) {
+  analogWrite(RGB_RED_PIN, 255 - rgb[0]);
+  analogWrite(RGB_GREEN_PIN, 255 - rgb[1]);
+  analogWrite(RGB_BLUE_PIN, 255 - rgb[2]);
+}
+
+
+#define EXT_RGB_R_PIN A1
+#define EXT_RGB_G_PIN A0
+#define EXT_RGB_B_PIN A2
+
+
+/**
+ * Set the RGB to a [r, g, b] value
+ * where r,g,b \in [0, 255]
+ */
+void ext_rgb_set(int (&rgb)[3]) {
+  analogWrite(E_RED_PIN, rgb[0]);
+  analogWrite(E_GREEN_PIN, rgb[1]);
+  analogWrite(E_BLUE_PIN, rgb[2]);
+}
+
+#define LIGHT_SHOW_COUNT 97
+
+struct LightShowEntry {
+  bool is_external_led;
+  int led_rgb[3];
+  int delay;
+};
+
+LightShowEntry LIGHT_SHOW[LIGHT_SHOW_COUNT] = {
+  { .is_external_led = true, .led_rgb = { 186, 113, 139 }, .delay = 144 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 0 }, .delay = 124 },
+  { .is_external_led = true, .led_rgb = { 249, 164, 216 }, .delay = 94 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 123 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 148 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 255 }, .delay = 56 },
+  { .is_external_led = true, .led_rgb = { 147, 12, 66 }, .delay = 79 },
+  { .is_external_led = true, .led_rgb = { 141, 75, 134 }, .delay = 122 },
+  { .is_external_led = true, .led_rgb = { 175, 71, 128 }, .delay = 76 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 255 }, .delay = 53 },
+  { .is_external_led = true, .led_rgb = { 240, 80, 82 }, .delay = 69 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 70 },
+  { .is_external_led = true, .led_rgb = { 172, 44, 13 }, .delay = 117 },
+  { .is_external_led = true, .led_rgb = { 27, 186, 60 }, .delay = 142 },
+  { .is_external_led = true, .led_rgb = { 144, 198, 170 }, .delay = 95 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 107 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 115 },
+  { .is_external_led = true, .led_rgb = { 141, 93, 26 }, .delay = 91 },
+  { .is_external_led = true, .led_rgb = { 60, 230, 31 }, .delay = 60 },
+  { .is_external_led = true, .led_rgb = { 217, 42, 243 }, .delay = 99 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 0 }, .delay = 62 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 124 },
+  { .is_external_led = true, .led_rgb = { 53, 225, 83 }, .delay = 73 },
+  { .is_external_led = true, .led_rgb = { 99, 70, 112 }, .delay = 55 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 65 },
+  { .is_external_led = true, .led_rgb = { 14, 84, 2 }, .delay = 144 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 69 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 117 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 145 },
+  { .is_external_led = true, .led_rgb = { 14, 166, 40 }, .delay = 50 },
+  { .is_external_led = true, .led_rgb = { 81, 212, 32 }, .delay = 68 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 89 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 0 }, .delay = 71 },
+  { .is_external_led = true, .led_rgb = { 26, 245, 24 }, .delay = 116 },
+  { .is_external_led = true, .led_rgb = { 140, 154, 52 }, .delay = 121 },
+  { .is_external_led = true, .led_rgb = { 80, 145, 172 }, .delay = 131 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 112 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 255 }, .delay = 123 },
+  { .is_external_led = true, .led_rgb = { 35, 183, 214 }, .delay = 113 },
+  { .is_external_led = true, .led_rgb = { 131, 78, 150 }, .delay = 87 },
+  { .is_external_led = true, .led_rgb = { 174, 177, 88 }, .delay = 132 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 255 }, .delay = 102 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 133 },
+  { .is_external_led = true, .led_rgb = { 33, 14, 138 }, .delay = 107 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 0 }, .delay = 146 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 147 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 255 }, .delay = 147 },
+  { .is_external_led = true, .led_rgb = { 69, 238, 103 }, .delay = 115 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 146 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 255 }, .delay = 61 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 255 }, .delay = 62 },
+  { .is_external_led = true, .led_rgb = { 45, 11, 34 }, .delay = 88 },
+  { .is_external_led = true, .led_rgb = { 239, 157, 185 }, .delay = 61 },
+  { .is_external_led = true, .led_rgb = { 239, 59, 42 }, .delay = 147 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 255 }, .delay = 139 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 255 }, .delay = 116 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 255 }, .delay = 140 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 0 }, .delay = 95 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 101 },
+  { .is_external_led = true, .led_rgb = { 99, 8, 72 }, .delay = 74 },
+  { .is_external_led = true, .led_rgb = { 247, 162, 199 }, .delay = 132 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 255 }, .delay = 73 },
+  { .is_external_led = true, .led_rgb = { 9, 78, 105 }, .delay = 137 },
+  { .is_external_led = true, .led_rgb = { 245, 135, 248 }, .delay = 95 },
+  { .is_external_led = true, .led_rgb = { 27, 170, 91 }, .delay = 106 },
+  { .is_external_led = true, .led_rgb = { 216, 27, 23 }, .delay = 76 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 111 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 255 }, .delay = 56 },
+  { .is_external_led = true, .led_rgb = { 174, 152, 23 }, .delay = 137 },
+  { .is_external_led = true, .led_rgb = { 193, 112, 20 }, .delay = 65 },
+  { .is_external_led = true, .led_rgb = { 112, 182, 81 }, .delay = 127 },
+  { .is_external_led = true, .led_rgb = { 32, 130, 130 }, .delay = 121 },
+  { .is_external_led = true, .led_rgb = { 206, 225, 165 }, .delay = 110 },
+  { .is_external_led = true, .led_rgb = { 46, 46, 126 }, .delay = 66 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 96 },
+  { .is_external_led = true, .led_rgb = { 27, 137, 227 }, .delay = 148 },
+  { .is_external_led = true, .led_rgb = { 74, 71, 11 }, .delay = 94 },
+  { .is_external_led = true, .led_rgb = { 81, 168, 133 }, .delay = 73 },
+  { .is_external_led = true, .led_rgb = { 201, 213, 146 }, .delay = 57 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 255 }, .delay = 69 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 89 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 118 },
+  { .is_external_led = false, .led_rgb = { 0, 0, 0 }, .delay = 122 },
+  { .is_external_led = true, .led_rgb = { 168, 124, 175 }, .delay = 140 },
+  { .is_external_led = true, .led_rgb = { 78, 223, 142 }, .delay = 76 },
+  { .is_external_led = true, .led_rgb = { 81, 150, 135 }, .delay = 134 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 0 }, .delay = 124 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 255 }, .delay = 131 },
+  { .is_external_led = true, .led_rgb = { 109, 194, 16 }, .delay = 144 },
+  { .is_external_led = true, .led_rgb = { 41, 113, 84 }, .delay = 78 },
+  { .is_external_led = false, .led_rgb = { 0, 255, 0 }, .delay = 136 },
+  { .is_external_led = true, .led_rgb = { 133, 12, 54 }, .delay = 116 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 129 },
+  { .is_external_led = true, .led_rgb = { 9, 15, 9 }, .delay = 62 },
+  { .is_external_led = true, .led_rgb = { 183, 2, 144 }, .delay = 139 },
+  { .is_external_led = false, .led_rgb = { 255, 255, 0 }, .delay = 110 },
+  { .is_external_led = false, .led_rgb = { 255, 0, 0 }, .delay = 104 },
+};
+
+void lightshow_run() {
+  for (int i = 0; i < LIGHT_SHOW_COUNT; i++) {
+    LightShowEntry entry = LIGHT_SHOW[i];
+
+    if (entry.is_external_led) {
+      ext_rgb_set(entry.led_rgb);
+    } else {
+      rgb_set(entry.led_rgb);
+    }
+
+    delay(entry.delay);
+  }
+
+  rgb_set(RGB_OFF);
+  ext_rgb_set(RGB_OFF);
+}
+
+// Dylan's Imported Code
+const int songLen = 22;
+
+int durs[songLen] = { 212, 212, 212, 211, 210, 210,  //one line per measure
+                      212, 211, 210, 210, 213,
+                      212, 212, 212, 211, 210, 210,
+                      212, 211, 210, 210, 213 };
+
+int octs[songLen] = { 215, 215, 215, 215, 216, 216,
+                      215, 215, 215, 216, 215,
+                      216, 216, 216, 216, 216, 216,
+                      215, 215, 215, 216, 215 };
+
+int notes[songLen] = { 230, 230, 230, 226, 232, 221,
+                       230, 226, 232, 221, 230,
+                       225, 225, 225, 226, 232, 221,
+                       229, 226, 232, 221, 230 };
+
+void imperial_march() {  //function to play the song
+  for (long k = 0; k < songLen; k++) {
+    Serial3.write(durs[k]);
+    Serial3.write(octs[k]);
+    Serial3.write(notes[k]);
+    int len = 214 - durs[k];
+    float del = 2000 / pow(2, len);
+    delay(int(del * 1.1));
+  }
 }
