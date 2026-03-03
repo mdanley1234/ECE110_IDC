@@ -199,11 +199,28 @@ void runHash() {
         delay(250);
       }
       setERGB(0,0,0);
-      updateLCD();
-      while(true);
+      int points = updateLCD();
+
+      // Victory / Loss Code
+      if (points < 10) {
+        performLoss();
+      }
+      else {
+        performVictory();
+      }
 
       break;
   }
+}
+
+// Victory
+void performVictory() {
+
+}
+
+// Loss
+void performLoss() {
+
 }
 
 // Check that score data is recieved from all bots
@@ -218,10 +235,17 @@ bool checkScores() {
 
 // Update LCD from scores[] array
 void updateLCD() {
+  int x = 0;
   for (int i = 0; i < 5; i++) {
     Serial3.print(scores[i]);
     Serial3.print(' ');
+    x += scores[i];
   }
+  Serial3.print('\n');
+  Serial3.print("SUM: ");
+  Serial3.print(x);
+
+  return x;
 }
 
 // LED set code
