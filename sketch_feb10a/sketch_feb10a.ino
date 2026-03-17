@@ -251,7 +251,7 @@ int updateLCD() {
     x += scores[i];
   }
   Serial3.print('\n');
-  Serial3.print("SUM: ");
+  Serial3.print("SUM ");
   Serial3.print(x);
 
   return x;
