@@ -46,6 +46,7 @@ Servo servoRight;
 int hash = 0;                            // Tracks current hash
 int objectPos = 0;                       // Tracks registered object position
 int scores[5] = { -1, -1, -1, -1, -1 };  // Tracks scores for other teams
+bool retransmit = false;
 
 // SYSTEM STATE DECLARATIONS
 
@@ -70,11 +71,11 @@ void setup() {
   // Setup the LCD
   Serial3.begin(9600);
   delay(100);
-  Serial.write(12);  // clear display
+  Serial3.write(12);  // clear display
   delay(10);
-  Serial.write(22);  // no cursor no blink
+  Serial3.write(22);  // no cursor no blink
   delay(10);
-  Serial.write(18);  // backlight off
+  Serial3.write(18);  // backlight off
   delay(10);
 
   // Setup servos
@@ -203,10 +204,17 @@ void runHash() {
       setERGB(0, 0, 0);
       while (!checkScores()) {
         pollXbee();
+        updateLCD();
+        checkTransmit();
         delay(250);
       }
       setERGB(0, 0, 0);
+      while (!checkTransmit())
+        ;
       int points = updateLCD();
+
+      while (millis() < 80000)
+        ;
 
       // Victory / Loss Code
       if (points < 10) {
@@ -219,6 +227,18 @@ void runHash() {
         ;
 
       break;
+  }
+}
+
+// Check for retransmit
+bool checkTransmit() {
+  // Check for retransmit time
+  if (millis() > 75000 && retransmit == false) {
+    retransmit = true;
+    sendXbee(ASCII_0 + scores[3]);
+    return true;
+  } else {
+    return retransmit;
   }
 }
 
@@ -244,14 +264,21 @@ bool checkScores() {
 
 // Update LCD from scores[] array
 int updateLCD() {
+
+  Serial3.write(12);  // clear display
+  delay(5);
+
   int x = 0;
   for (int i = 0; i < 5; i++) {
     Serial3.print(scores[i]);
     Serial3.print(' ');
     x += scores[i];
   }
-  Serial3.print('\n');
-  Serial3.print("SUM ");
+
+  // --- MOVE TO SECOND LINE ---
+  Serial3.write(148);  // Address for Line 2, Position 0
+
+  Serial3.print("SUM: ");
   Serial3.print(x);
 
   return x;
